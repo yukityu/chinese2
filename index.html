@@ -117,6 +117,12 @@
             font-weight: bold;
             color: #222f3e;
             letter-spacing: 2px;
+            transition: color 0.2s;
+        }
+
+        /* 當字卡被點擊/連線後變成紅色，提醒未做/已選 */
+        .word-card.clicked-word {
+            color: #ff4757 !important;
         }
 
         /* 檢查按鈕 */
@@ -200,7 +206,7 @@
 
         let selectedImage = null;
         let selectedWord = null;
-        let connections = {}; 
+        let connections = {}; // { imageId: wordId }
 
         const lineCanvas = document.getElementById('line-canvas');
         const ctx = lineCanvas.getContext('2d');
@@ -229,7 +235,6 @@
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.2);
             } else if (type === 'wrong') {
-                // 誇張的錯誤警告低音
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(150, audioCtx.currentTime);
                 osc.frequency.setValueAtTime(80, audioCtx.currentTime + 0.2);
@@ -238,20 +243,19 @@
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.4);
             } else if (type === 'win') {
-                // 🌟 超級誇張、熱鬧的勝利交響華麗音效 (連續高頻跳音與和弦)
                 const fanfare = [
-                    { f: 523.25, t: 0.0, d: 0.15 }, // C5
-                    { f: 659.25, t: 0.15, d: 0.15 }, // E5
-                    { f: 783.99, t: 0.3, d: 0.15 }, // G5
-                    { f: 1046.50, t: 0.45, d: 0.3 }, // C6
-                    { f: 783.99, t: 0.75, d: 0.15 }, // G5
-                    { f: 1046.50, t: 0.9, d: 0.5 }   // C6 (長音慶祝)
+                    { f: 523.25, t: 0.0, d: 0.15 }, 
+                    { f: 659.25, t: 0.15, d: 0.15 }, 
+                    { f: 783.99, t: 0.3, d: 0.15 }, 
+                    { f: 1046.50, t: 0.45, d: 0.3 }, 
+                    { f: 783.99, t: 0.75, d: 0.15 }, 
+                    { f: 1046.50, t: 0.9, d: 0.5 }   
                 ];
 
                 fanfare.forEach(note => {
                     const noteOsc = audioCtx.createOscillator();
                     const noteGain = audioCtx.createGain();
-                    noteOsc.type = 'triangle'; // 使用柔和又響亮的音色
+                    noteOsc.type = 'triangle';
                     noteOsc.connect(noteGain);
                     noteGain.connect(audioCtx.destination);
                     
@@ -325,11 +329,31 @@
                 const imgId = selectedImage.dataset.id;
                 const wordId = selectedWord.dataset.id;
 
+                // 檢查該 word 原本是否被其他 image 連過，若有則移除舊連線與該字卡的紅色狀態
                 Object.keys(connections).forEach(k => {
-                    if (connections[k] === wordId) delete connections[k];
+                    if (connections[k] === wordId) {
+                        delete connections[k];
+                        const oldWordEl = document.querySelector(`#words-column .card[data-id="${wordId}"]`);
+                        if (oldWordEl) oldWordEl.classList.remove('clicked-word');
+                    }
                 });
 
+                // 檢查當前 image 是否之前連過其他 word，若有則把舊 word 的紅色狀態移除
+                if (connections[imgId]) {
+                    const oldWordId = connections[imgId];
+                    const oldWordEl = document.querySelector(`#words-column .card[data-id="${oldWordId}"]`);
+                    // 確保沒有其他連線指向這個舊 word 時才移除紅色
+                    let stillUsed = false;
+                    Object.keys(connections).forEach(k => {
+                        if (k !== imgId && connections[k] === oldWordId) stillUsed = true;
+                    });
+                    if (oldWordEl && !stillUsed) oldWordEl.classList.remove('clicked-word');
+                }
+
+                // 建立新連線並將字卡變成紅色
                 connections[imgId] = wordId;
+                selectedWord.classList.add('clicked-word');
+
                 playSound('connect');
 
                 selectedImage.classList.remove('selected');
@@ -389,8 +413,8 @@
             });
 
             if (correctCount === total) {
-                playSound('win'); // 播放誇張熱鬧的勝利音樂
-                launchFireworks(); // 釋放全螢幕豪華煙花
+                playSound('win');
+                launchFireworks();
             } else {
                 playSound('wrong');
                 shakeContainer();
@@ -404,7 +428,6 @@
             setTimeout(() => container.classList.remove('shake'), 400);
         }
 
-        // 豪華全螢幕煙花動畫
         function launchFireworks() {
             const canvas = document.getElementById('fireworks-canvas');
             const fwCtx = canvas.getContext('2d');
@@ -417,51 +440,3 @@
             function createFirework(x, y) {
                 for (let i = 0; i < 80; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const speed = Math.random() * 9 + 2;
-                    particles.push({
-                        x: x,
-                        y: y,
-                        vx: Math.cos(angle) * speed,
-                        vy: Math.sin(angle) * speed,
-                        color: colors[Math.floor(Math.random() * colors.length)],
-                        alpha: 1,
-                        size: Math.random() * 6 + 2
-                    });
-                }
-            }
-
-            // 連環多發煙花
-            createFirework(canvas.width * 0.3, canvas.height * 0.4);
-            setTimeout(() => createFirework(canvas.width * 0.7, canvas.height * 0.3), 150);
-            setTimeout(() => createFirework(canvas.width * 0.5, canvas.height * 0.5), 300);
-            setTimeout(() => createFirework(canvas.width * 0.2, canvas.height * 0.6), 450);
-            setTimeout(() => createFirework(canvas.width * 0.8, canvas.height * 0.5), 600);
-
-            function animate() {
-                fwCtx.clearRect(0, 0, canvas.width, canvas.height);
-                particles.forEach((p, index) => {
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vy += 0.05; // 重力
-                    p.alpha -= 0.012;
-
-                    fwCtx.globalAlpha = Math.max(0, p.alpha);
-                    fwCtx.fillStyle = p.color;
-                    fwCtx.beginPath();
-                    fwCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    fwCtx.fill();
-
-                    if (p.alpha <= 0) particles.splice(index, 1);
-                });
-
-                if (particles.length > 0) {
-                    requestAnimationFrame(animate);
-                }
-            }
-            animate();
-        }
-
-        window.onload = initGame;
-    </script>
-</body>
-</html>
