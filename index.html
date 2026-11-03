@@ -115,12 +115,12 @@
         .word-card {
             font-size: 2.3rem;
             font-weight: bold;
-            color: #222f3e;
+            color: #222f3e !important;
             letter-spacing: 2px;
             transition: color 0.2s;
         }
 
-        /* 連線成功後明確轉為藍色 */
+        /* 連線成功後強制變藍色 */
         .word-card.connected-word {
             color: #0984e3 !important;
         }
@@ -206,6 +206,29 @@
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
+        // 廣東話人聲鼓勵語音合成
+        function speakEncouragement() {
+            if ('speechSynthesis' in window) {
+                // 停止當前正在朗讀的語音，避免堆疊
+                window.speechSynthesis.cancel();
+                
+                const phrases = [
+                    "唔緊要，再試一次！",
+                    "加油呀，再諗一諗！",
+                    "差少少咋，再嚟過！",
+                    "動動腦筋，一定得嘅！"
+                ];
+                const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+                
+                const utterance = new SpeechSynthesisUtterance(randomPhrase);
+                utterance.lang = 'zh-HK'; // 設定為香港廣東話
+                utterance.rate = 1.0;     // 語速
+                utterance.pitch = 1.2;    // 稍稍調高音調，聽起來更活潑適合小朋友
+                
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
         function playSound(type) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator();
@@ -227,14 +250,6 @@
                 gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.2);
-            } else if (type === 'wrong') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-                osc.frequency.setValueAtTime(80, audioCtx.currentTime + 0.2);
-                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.4);
             } else if (type === 'win') {
                 const fanfare = [
                     { f: 523.25, t: 0.0, d: 0.15 }, 
@@ -306,15 +321,18 @@
             drawLines();
         }
 
-        // 直接遍歷並精確套用藍色樣式
         function updateWordColors() {
             const allWords = document.querySelectorAll('#words-column .card');
-            allWords.forEach(c => c.classList.remove('connected-word'));
+            allWords.forEach(c => {
+                c.classList.remove('connected-word');
+                c.style.color = '#222f3e';
+            });
 
             Object.values(connections).forEach(wordId => {
                 const targetWordEl = document.querySelector(`#words-column .card[data-id="${wordId}"]`);
                 if (targetWordEl) {
                     targetWordEl.classList.add('connected-word');
+                    targetWordEl.style.color = '#0984e3';
                 }
             });
         }
@@ -336,7 +354,6 @@
                 const imgId = selectedImage.dataset.id;
                 const wordId = selectedWord.dataset.id;
 
-                // 綁定連線
                 connections[imgId] = wordId;
 
                 playSound('connect');
@@ -346,7 +363,6 @@
                 selectedImage = null;
                 selectedWord = null;
 
-                // 強制更新字卡顏色與繪製線條
                 updateWordColors();
                 drawLines();
             }
@@ -386,7 +402,7 @@
             const connectedCount = Object.keys(connections).length;
 
             if (connectedCount < total) {
-                playSound('wrong');
+                speakEncouragement(); // 👈 答錯或未完成時，播放廣東話人聲鼓勵！
                 shakeContainer();
                 alert('還有未連線的職業哦，加油！');
                 return;
@@ -403,7 +419,7 @@
                 playSound('win');
                 launchFireworks();
             } else {
-                playSound('wrong');
+                speakEncouragement(); // 👈 答錯時，播放廣東話人聲鼓勵！
                 shakeContainer();
                 alert(`答對了 ${correctCount} 個，再仔細想想看哦！`);
             }
