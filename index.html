@@ -309,7 +309,23 @@
             const container = document.querySelector('.game-container');
             lineCanvas.width = container.clientWidth;
             lineCanvas.height = container.clientHeight;
+            updateWordColors();
             drawLines();
+        }
+
+        // 根據目前的 connections 狀態更新右側字卡的顏色
+        function updateWordColors() {
+            // 先清除所有字卡的藍色
+            document.querySelectorAll('#words-column .card').forEach(c => {
+                c.classList.remove('connected-word');
+            });
+            // 找出所有已被連線的 wordId，並加上藍色
+            Object.values(connections).forEach(wordId => {
+                const wordEl = document.querySelector(`#words-column .card[data-id="${wordId}"]`);
+                if (wordEl) {
+                    wordEl.classList.add('connected-word');
+                }
+            });
         }
 
         function selectCard(card, type) {
@@ -329,29 +345,8 @@
                 const imgId = selectedImage.dataset.id;
                 const wordId = selectedWord.dataset.id;
 
-                // 檢查該 word 是否原本被其他 image 連過，若是則解除該舊連線，並移除其藍色狀態
-                Object.keys(connections).forEach(k => {
-                    if (connections[k] === wordId) {
-                        delete connections[k];
-                        const oldWordEl = document.querySelector(`#words-column .card[data-id="${wordId}"]`);
-                        if (oldWordEl) oldWordEl.classList.remove('connected-word');
-                    }
-                });
-
-                // 檢查當前 image 是否之前連過其他 word，若是則檢查該舊 word 是否還有其他人連，沒有的話移除藍色狀態
-                if (connections[imgId]) {
-                    const oldWordId = connections[imgId];
-                    const oldWordEl = document.querySelector(`#words-column .card[data-id="${oldWordId}"]`);
-                    let stillUsed = false;
-                    Object.keys(connections).forEach(k => {
-                        if (k !== imgId && connections[k] === oldWordId) stillUsed = true;
-                    });
-                    if (oldWordEl && !stillUsed) oldWordEl.classList.remove('connected-word');
-                }
-
-                // 建立新連線並將對應字卡變成藍色
+                // 建立新連線
                 connections[imgId] = wordId;
-                selectedWord.classList.add('connected-word');
 
                 playSound('connect');
 
@@ -360,6 +355,7 @@
                 selectedImage = null;
                 selectedWord = null;
 
+                updateWordColors();
                 drawLines();
             }
         }
