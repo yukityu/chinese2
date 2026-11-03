@@ -120,9 +120,9 @@
             transition: color 0.2s;
         }
 
-        /* 當字卡被點擊/連線後變成紅色，提醒未做/已選 */
-        .word-card.clicked-word {
-            color: #ff4757 !important;
+        /* 當字卡成功連線後變成藍色 */
+        .word-card.connected-word {
+            color: #0984e3 !important;
         }
 
         /* 檢查按鈕 */
@@ -329,30 +329,29 @@
                 const imgId = selectedImage.dataset.id;
                 const wordId = selectedWord.dataset.id;
 
-                // 檢查該 word 原本是否被其他 image 連過，若有則移除舊連線與該字卡的紅色狀態
+                // 檢查該 word 是否原本被其他 image 連過，若是則解除該舊連線，並移除其藍色狀態
                 Object.keys(connections).forEach(k => {
                     if (connections[k] === wordId) {
                         delete connections[k];
                         const oldWordEl = document.querySelector(`#words-column .card[data-id="${wordId}"]`);
-                        if (oldWordEl) oldWordEl.classList.remove('clicked-word');
+                        if (oldWordEl) oldWordEl.classList.remove('connected-word');
                     }
                 });
 
-                // 檢查當前 image 是否之前連過其他 word，若有則把舊 word 的紅色狀態移除
+                // 檢查當前 image 是否之前連過其他 word，若是則檢查該舊 word 是否還有其他人連，沒有的話移除藍色狀態
                 if (connections[imgId]) {
                     const oldWordId = connections[imgId];
                     const oldWordEl = document.querySelector(`#words-column .card[data-id="${oldWordId}"]`);
-                    // 確保沒有其他連線指向這個舊 word 時才移除紅色
                     let stillUsed = false;
                     Object.keys(connections).forEach(k => {
                         if (k !== imgId && connections[k] === oldWordId) stillUsed = true;
                     });
-                    if (oldWordEl && !stillUsed) oldWordEl.classList.remove('clicked-word');
+                    if (oldWordEl && !stillUsed) oldWordEl.classList.remove('connected-word');
                 }
 
-                // 建立新連線並將字卡變成紅色
+                // 建立新連線並將對應字卡變成藍色
                 connections[imgId] = wordId;
-                selectedWord.classList.add('clicked-word');
+                selectedWord.classList.add('connected-word');
 
                 playSound('connect');
 
@@ -440,3 +439,50 @@
             function createFirework(x, y) {
                 for (let i = 0; i < 80; i++) {
                     const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 9 + 2;
+                    particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        alpha: 1,
+                        size: Math.random() * 6 + 2
+                    });
+                }
+            }
+
+            createFirework(canvas.width * 0.3, canvas.height * 0.4);
+            setTimeout(() => createFirework(canvas.width * 0.7, canvas.height * 0.3), 150);
+            setTimeout(() => createFirework(canvas.width * 0.5, canvas.height * 0.5), 300);
+            setTimeout(() => createFirework(canvas.width * 0.2, canvas.height * 0.6), 450);
+            setTimeout(() => createFirework(canvas.width * 0.8, canvas.height * 0.5), 600);
+
+            function animate() {
+                fwCtx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach((p, index) => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.05;
+                    p.alpha -= 0.012;
+
+                    fwCtx.globalAlpha = Math.max(0, p.alpha);
+                    fwCtx.fillStyle = p.color;
+                    fwCtx.beginPath();
+                    fwCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    fwCtx.fill();
+
+                    if (p.alpha <= 0) particles.splice(index, 1);
+                });
+
+                if (particles.length > 0) {
+                    requestAnimationFrame(animate);
+                }
+            }
+            animate();
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>
