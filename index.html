@@ -121,14 +121,14 @@
 
         /* 檢查按鈕 */
         .btn-check {
-            background: #10ac84;
+            background: #ff4757;
             color: white;
-            font-size: 1.9rem;
+            font-size: 2rem;
             font-weight: bold;
             border: none;
-            padding: 15px 45px;
+            padding: 18px 50px;
             border-radius: 50px;
-            box-shadow: 0 8px 0px #0e8364;
+            box-shadow: 0 9px 0px #c0392b;
             cursor: pointer;
             transition: all 0.1s;
             margin-top: 10px;
@@ -136,8 +136,8 @@
         }
 
         .btn-check:active {
-            transform: translateY(4px);
-            box-shadow: 0 4px 0px #0e8364;
+            transform: translateY(5px);
+            box-shadow: 0 4px 0px #c0392b;
         }
 
         /* 煙花 Canvas */
@@ -154,8 +154,8 @@
         /* 抖動動畫 */
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-8px); }
-            40%, 80% { transform: translateX(8px); }
+            20%, 60% { transform: translateX(-12px); }
+            40%, 80% { transform: translateX(12px); }
         }
 
         .shake {
@@ -167,7 +167,7 @@
             .card { min-height: 80px; padding: 5px; }
             .avatar-img-container { width: 60px; height: 60px; }
             .word-card { font-size: 1.8rem; }
-            .btn-check { font-size: 1.5rem; padding: 12px 35px; }
+            .btn-check { font-size: 1.6rem; padding: 14px 35px; }
         }
     </style>
 </head>
@@ -190,7 +190,6 @@
     <canvas id="fireworks-canvas"></canvas>
 
     <script>
-        // 職業數據，對應您的圖片檔名
         const jobsData = [
             { id: 'nurse', name: '護士', imgSrc: 'nurse.png', color: '#ffb8b8' },
             { id: 'police', name: '警察', imgSrc: 'police.png', color: '#a29bfe' },
@@ -201,12 +200,11 @@
 
         let selectedImage = null;
         let selectedWord = null;
-        let connections = {}; // { imageId: wordId }
+        let connections = {}; 
 
         const lineCanvas = document.getElementById('line-canvas');
         const ctx = lineCanvas.getContext('2d');
 
-        // 音效合成 (Web Audio API - 無需外部音效檔)
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
         function playSound(type) {
@@ -224,37 +222,49 @@
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.1);
             } else if (type === 'connect') {
-                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.08); // E5
+                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); 
+                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.08); 
                 gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.2);
             } else if (type === 'wrong') {
+                // 誇張的錯誤警告低音
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(180, audioCtx.currentTime);
-                osc.frequency.setValueAtTime(110, audioCtx.currentTime + 0.15);
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(80, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.3);
+                osc.stop(audioCtx.currentTime + 0.4);
             } else if (type === 'win') {
-                const notes = [523.25, 659.25, 783.99, 1046.50]; // C, E, G, C
-                notes.forEach((freq, idx) => {
+                // 🌟 超級誇張、熱鬧的勝利交響華麗音效 (連續高頻跳音與和弦)
+                const fanfare = [
+                    { f: 523.25, t: 0.0, d: 0.15 }, // C5
+                    { f: 659.25, t: 0.15, d: 0.15 }, // E5
+                    { f: 783.99, t: 0.3, d: 0.15 }, // G5
+                    { f: 1046.50, t: 0.45, d: 0.3 }, // C6
+                    { f: 783.99, t: 0.75, d: 0.15 }, // G5
+                    { f: 1046.50, t: 0.9, d: 0.5 }   // C6 (長音慶祝)
+                ];
+
+                fanfare.forEach(note => {
                     const noteOsc = audioCtx.createOscillator();
                     const noteGain = audioCtx.createGain();
+                    noteOsc.type = 'triangle'; // 使用柔和又響亮的音色
                     noteOsc.connect(noteGain);
                     noteGain.connect(audioCtx.destination);
-                    noteOsc.frequency.value = freq;
-                    noteGain.gain.setValueAtTime(0.2, audioCtx.currentTime + idx * 0.12);
-                    noteGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + idx * 0.12 + 0.3);
-                    noteOsc.start(audioCtx.currentTime + idx * 0.12);
-                    noteOsc.stop(audioCtx.currentTime + idx * 0.12 + 0.3);
+                    
+                    noteOsc.frequency.setValueAtTime(note.f, audioCtx.currentTime + note.t);
+                    noteGain.gain.setValueAtTime(0.35, audioCtx.currentTime + note.t);
+                    noteGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + note.t + note.d);
+                    
+                    noteOsc.start(audioCtx.currentTime + note.t);
+                    noteOsc.stop(audioCtx.currentTime + note.t + note.d);
                 });
             }
         }
 
-        // 初始化遊戲
         function initGame() {
             const imgCol = document.getElementById('images-column');
             const wordCol = document.getElementById('words-column');
@@ -262,7 +272,6 @@
             imgCol.innerHTML = '';
             wordCol.innerHTML = '';
 
-            // 隨機打亂左邊圖案與右邊字卡
             const shuffledImages = [...jobsData].sort(() => Math.random() - 0.5);
             const shuffledWords = [...jobsData].sort(() => Math.random() - 0.5);
 
@@ -299,7 +308,6 @@
             drawLines();
         }
 
-        // 卡片點擊選取邏輯
         function selectCard(card, type) {
             playSound('select');
 
@@ -313,12 +321,10 @@
                 card.classList.add('selected');
             }
 
-            // 同時選中圖片與文字時建立連線
             if (selectedImage && selectedWord) {
                 const imgId = selectedImage.dataset.id;
                 const wordId = selectedWord.dataset.id;
 
-                // 清除舊連線
                 Object.keys(connections).forEach(k => {
                     if (connections[k] === wordId) delete connections[k];
                 });
@@ -335,7 +341,6 @@
             }
         }
 
-        // 繪製彩色連線
         function drawLines() {
             ctx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
             const containerRect = document.querySelector('.game-container').getBoundingClientRect();
@@ -354,7 +359,6 @@
                     const x2 = r2.left - containerRect.left;
                     const y2 = r2.top + r2.height / 2 - containerRect.top;
 
-                    // 畫出流暢的圓弧漸層線
                     ctx.beginPath();
                     ctx.moveTo(x1, y1);
                     ctx.bezierCurveTo(x1 + 50, y1, x2 - 50, y2, x2, y2);
@@ -366,7 +370,6 @@
             });
         }
 
-        // 對答案
         function checkAnswers() {
             const total = jobsData.length;
             const connectedCount = Object.keys(connections).length;
@@ -386,8 +389,8 @@
             });
 
             if (correctCount === total) {
-                playSound('win');
-                launchFireworks();
+                playSound('win'); // 播放誇張熱鬧的勝利音樂
+                launchFireworks(); // 釋放全螢幕豪華煙花
             } else {
                 playSound('wrong');
                 shakeContainer();
@@ -401,7 +404,7 @@
             setTimeout(() => container.classList.remove('shake'), 400);
         }
 
-        // 全螢幕煙花動畫
+        // 豪華全螢幕煙花動畫
         function launchFireworks() {
             const canvas = document.getElementById('fireworks-canvas');
             const fwCtx = canvas.getContext('2d');
@@ -409,12 +412,12 @@
             canvas.height = window.innerHeight;
 
             let particles = [];
-            const colors = ['#ff4757', '#2ed573', '#1e90ff', '#ffa502', '#e84393', '#70a1ff'];
+            const colors = ['#ff4757', '#2ed573', '#1e90ff', '#ffa502', '#e84393', '#70a1ff', '#ff6b81', '#7bed9f'];
 
             function createFirework(x, y) {
-                for (let i = 0; i < 60; i++) {
+                for (let i = 0; i < 80; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const speed = Math.random() * 7 + 2;
+                    const speed = Math.random() * 9 + 2;
                     particles.push({
                         x: x,
                         y: y,
@@ -422,22 +425,25 @@
                         vy: Math.sin(angle) * speed,
                         color: colors[Math.floor(Math.random() * colors.length)],
                         alpha: 1,
-                        size: Math.random() * 5 + 2
+                        size: Math.random() * 6 + 2
                     });
                 }
             }
 
+            // 連環多發煙花
             createFirework(canvas.width * 0.3, canvas.height * 0.4);
-            setTimeout(() => createFirework(canvas.width * 0.7, canvas.height * 0.3), 200);
-            setTimeout(() => createFirework(canvas.width * 0.5, canvas.height * 0.5), 400);
+            setTimeout(() => createFirework(canvas.width * 0.7, canvas.height * 0.3), 150);
+            setTimeout(() => createFirework(canvas.width * 0.5, canvas.height * 0.5), 300);
+            setTimeout(() => createFirework(canvas.width * 0.2, canvas.height * 0.6), 450);
+            setTimeout(() => createFirework(canvas.width * 0.8, canvas.height * 0.5), 600);
 
             function animate() {
                 fwCtx.clearRect(0, 0, canvas.width, canvas.height);
                 particles.forEach((p, index) => {
                     p.x += p.vx;
                     p.y += p.vy;
-                    p.vy += 0.06; // 重力效果
-                    p.alpha -= 0.015;
+                    p.vy += 0.05; // 重力
+                    p.alpha -= 0.012;
 
                     fwCtx.globalAlpha = Math.max(0, p.alpha);
                     fwCtx.fillStyle = p.color;
